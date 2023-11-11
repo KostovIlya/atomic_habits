@@ -9,6 +9,16 @@ packages = [{include = "atomic_habits"}]
 [tool.poetry.dependencies]
 python = "^3.11"
 django = "^4.2.7"
+python-dotenv = "^1.0.0"
+psycopg2 = "^2.9.9"
+pillow = "^10.1.0"
+djangorestframework = "^3.14.0"
+django-filter = "^23.3"
+djangorestframework-simplejwt = "^5.3.0"
+drf-yasg = "^1.21.7"
+redis = "^5.0.1"
+celery = "^5.3.5"
+eventlet = "^0.33.3"
 
 
 [build-system]
