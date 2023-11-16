@@ -5,19 +5,30 @@ from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from habits.models import Habit
 from habits.permissions import IsOwner
 from habits.serializers import HabitSerializer
+from habits.services import send_message_bot, create_periodic_task, update_periodic_task, delete_periodic_task
 
 
 class HabitCreateAPIView(generics.CreateAPIView):
+    """
+    Создание привычки с добавлением задачи на отправку уведомлений
+    """
+
     serializer_class = HabitSerializer
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        habit = serializer.save(user=self.request.user)
+        if not habit.is_pleasurable:
+            create_periodic_task(habit)
 
 
 class HabitUpdateAPIView(generics.UpdateAPIView):
     serializer_class = HabitSerializer
     queryset = Habit.objects.all()
     permission_classes = [IsOwner]
+
+    def perform_update(self, serializer):
+        habit = serializer.save()
+        update_periodic_task(habit)
 
 
 class HabitListAPIView(generics.ListAPIView):
@@ -40,6 +51,10 @@ class HabitRetrieveAPIView(generics.RetrieveAPIView):
 class HabitDestroyAPIView(generics.DestroyAPIView):
     queryset = Habit.objects.all()
     permission_classes = [IsOwner]
+
+    def perform_destroy(self, instance):
+        delete_periodic_task(instance)
+        instance.delete()
 
 
 class PublicHabitListAPIView(generics.ListAPIView):

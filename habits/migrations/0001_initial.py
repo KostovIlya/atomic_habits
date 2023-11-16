@@ -18,7 +18,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('place', models.CharField(max_length=200, verbose_name='место')),
-                ('time', models.TimeField(verbose_name='время')),
+                ('time', models.DateTimeField(verbose_name='дата и время')),
                 ('action', models.CharField(max_length=250, verbose_name='действие')),
                 ('is_pleasurable', models.BooleanField(default=False, verbose_name='признак приятной привычки')),
                 ('frequency', models.PositiveSmallIntegerField(default=1, validators=[django.core.validators.MinValueValidator(1), django.core.validators.MaxValueValidator(7)], verbose_name='Периодичность')),
