@@ -2,6 +2,8 @@ from rest_framework.exceptions import ValidationError
 
 
 class HabitValidator:
+    """Валидация входящих данных 'is_pleasurable', 'related_habit', 'reward'"""
+
     __slots__ = ('is_pleasurable', 'related_habit', 'reward')
 
     def __init__(self, is_pleasurable: str, related_habit: str, reward: str) -> None:

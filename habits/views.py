@@ -9,32 +9,45 @@ from habits.services import create_periodic_task, update_periodic_task, delete_p
 
 class HabitCreateAPIView(generics.CreateAPIView):
     """
-    Создание привычки с добавлением задачи на отправку уведомлений
+        Создание привычки
     """
 
     serializer_class = HabitSerializer
 
     def perform_create(self, serializer):
+        """Если привычка полезная, добавляем задачу на отправку уведомлений"""
+
         habit = serializer.save(user=self.request.user)
         if not habit.is_pleasurable:
             create_periodic_task(habit)
 
 
 class HabitUpdateAPIView(generics.UpdateAPIView):
+    """
+        Обновление привычки
+    """
     serializer_class = HabitSerializer
     queryset = Habit.objects.all()
     permission_classes = [IsOwner]
 
     def perform_update(self, serializer):
+        """При наличии периодической задачи, Обновление задачи на отправку уведомлений"""
+
         habit = serializer.save()
-        update_periodic_task(habit)
+        if habit.task_id:
+            update_periodic_task(habit)
 
 
 class HabitListAPIView(generics.ListAPIView):
+    """
+        Список привычек
+    """
     serializer_class = HabitSerializer
     queryset = Habit.objects.all()
 
     def get_queryset(self):
+        """Предоставление доступа персоналу ко всему списку привычек"""
+
         queryset = super().get_queryset()
         if self.request.user.is_staff:
             return queryset
@@ -42,21 +55,32 @@ class HabitListAPIView(generics.ListAPIView):
 
 
 class HabitRetrieveAPIView(generics.RetrieveAPIView):
+    """
+        Получение привычки
+    """
     serializer_class = HabitSerializer
     queryset = Habit.objects.all()
     permission_classes = [IsOwner | IsAdminUser]
 
 
 class HabitDestroyAPIView(generics.DestroyAPIView):
+    """
+    Удаление привычки
+    """
     queryset = Habit.objects.all()
     permission_classes = [IsOwner]
 
     def perform_destroy(self, instance):
-        delete_periodic_task(instance)
+        """При наличии у привычки периодической задачи, её удаление"""
+        if instance.task_id:
+            delete_periodic_task(instance)
         instance.delete()
 
 
 class PublicHabitListAPIView(generics.ListAPIView):
+    """
+        Получение списка публичных привычек
+    """
     serializer_class = HabitSerializer
     queryset = Habit.objects.all()
 

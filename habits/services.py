@@ -5,11 +5,12 @@ from django_celery_beat.models import PeriodicTask, IntervalSchedule
 from telebot import types
 
 from habits.management.commands.bot import bot
-from habits.models import Habit
 from users.models import User
 
 
 def create_periodic_task(habit):
+    """Создание периодической задачи"""
+
     schedule, created = IntervalSchedule.objects.get_or_create(
         every=habit.frequency,
         period=IntervalSchedule.DAYS,
@@ -25,11 +26,13 @@ def create_periodic_task(habit):
         start_time=habit.time - timedelta(minutes=10)
     )
 
-    habit.task_id = task.id
+    habit.task_id = task.id  # Записываем id задачи в привычку
     habit.save()
 
 
 def update_periodic_task(habit):
+    """Обновление периодической задачи"""
+
     task = PeriodicTask.objects.get(id=habit.task_id)
     task.interval.every = habit.frequency
     task.start_time = habit.time - timedelta(minutes=10)
@@ -37,19 +40,19 @@ def update_periodic_task(habit):
 
 
 def delete_periodic_task(habit):
+    """Удаление периодической задачи"""
+
     task = PeriodicTask.objects.get(id=habit.task_id)
     task.delete()
-
-
-# def disable_tasks(user_id):
-#     habits = Habit.objects.filter(id=user_id)
-#     for habit in habits:
-#         PeriodicTask.objects.filter(id=habit.task_id).update(enabled=False)
+    habit.task_id = None
+    habit.save()
 
 
 # TG BOT
 @bot.message_handler(commands=['start'])
 def start_message(message):
+    """Обработка команды /start"""
+
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
     keyboard.row("Авторизоваться", "Сменить пользователя")
     bot.send_message(message.chat.id,
@@ -60,6 +63,8 @@ def start_message(message):
 
 @bot.message_handler(func=lambda message: message.text == "Авторизоваться")
 def authorization(message):
+    """Авторизация пользователя"""
+
     user = User.objects.filter(chat_id=message.chat.id)
     if user.exists():
         bot.send_message(message.chat.id, "Вы уже авторизованы")
@@ -69,6 +74,8 @@ def authorization(message):
 
 @bot.message_handler(func=lambda message: message.text == "Сменить пользователя")
 def change_user_start(message):
+    """Изменение пользователя"""
+
     user = User.objects.filter(chat_id=message.chat.id, is_active=True)
     if user.exists():
         authorized_user(message)
@@ -78,12 +85,16 @@ def change_user_start(message):
 
 @bot.message_handler(func=lambda message: True)
 def other_handle_message(message):
+    """Обработка остальных сообщений введенных в ручную"""
+
     user = User.objects.filter(chat_id=message.chat.id, is_active=True)
     if not user.exists():
         bot.send_message(message.chat.id, f'{message.from_user.first_name}! Для начала авторизуйтесь.')
 
 
 def process_email(message):
+    """Получение email из сообщения, проверка на существование, запрос на ввод пароля"""
+
     email = message.text
     user = User.objects.filter(email=email, is_active=True)
 
@@ -97,6 +108,8 @@ def process_email(message):
 
 
 def process_password(message, user):
+    """Получение пароля из сообщения, проверка на соответствие"""
+
     password = message.text
     if user.check_password(password):
         user.chat_id = message.chat.id
@@ -107,5 +120,7 @@ def process_password(message, user):
 
 
 def authorized_user(message):
+    """Запрос на ввод email"""
+
     bot.send_message(message.chat.id, "Введите адрес электронной почты")
     bot.register_next_step_handler(message, process_email)

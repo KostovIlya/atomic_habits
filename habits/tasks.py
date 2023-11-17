@@ -10,6 +10,8 @@ from habits.models import Habit
 
 @shared_task
 def send_telegram_message(habit_id):
+    """Задача на отправку уведомлений пользователю"""
+
     habit = Habit.objects.get(id=habit_id)
 
     moscow_tz = pytz.timezone('Europe/Moscow')
@@ -26,9 +28,6 @@ def send_telegram_message(habit_id):
         else:
             message_2 = f'Твоя награда за выполнение полезной привычки, получи награду {habit.reward}'
         bot.send_message(habit.user.chat_id, message_2)
-
-    # elif not habit.user.is_active:
-    #     disable_tasks(habit.user.id)
 
     else:
         return f'Пользователь {habit.user} не подключен к боту уведомлений'

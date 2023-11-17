@@ -5,6 +5,7 @@ from habits.models import NULLABLE
 
 
 class User(AbstractUser):
+    """Модель пользователя"""
 
     username = None
     email = models.EmailField(max_length=255, unique=True)
