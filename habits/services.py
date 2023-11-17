@@ -1,22 +1,12 @@
 import json
-import os
 from datetime import timedelta
 
-import requests
-from django.conf import settings
 from django_celery_beat.models import PeriodicTask, IntervalSchedule
+from telebot import types
 
-
-def send_message_bot(text):
-    chat_id = os.getenv('TG_CHAT_ID')
-    params = {'chat_id': chat_id, 'text': text}
-
-    response = requests.get(f'{settings.TG_URL}{settings.TG_BOT_TOKEN}/sendMessage', params=params)
-    # print(response)
-    # response_decode = response.content.decode('utf-8')
-    # print(response_decode)
-
-    # print(response_decode.json())
+from habits.management.commands.bot import bot
+from habits.models import Habit
+from users.models import User
 
 
 def create_periodic_task(habit):
@@ -51,31 +41,71 @@ def delete_periodic_task(habit):
     task.delete()
 
 
-# def get_updates(offset=0):
-#     result = requests.get(f'{TG_URL}{TG_BOT_TOKEN}/getUpdates?offset={offset}').json()
-#     return result['result']
-#
-#
-# def send_message(chat_id, text):
-#     requests.get(f'{TG_URL}{TG_BOT_TOKEN}/sendMessage?chat_id={chat_id}&text={text}')
-#
-#
-# def check_message(chat_id, message):
-#     for mes in message.lower().replace(',', '').split():
-#         if mes in ['привет', 'ку']:
-#             send_message(chat_id, 'Привет :)')
-#         if mes in ['дела?', 'успехи?']:
-#             send_message(chat_id, 'Спасибо, хорошо!')
-#
-#
-# def run():
-#     update_id = get_updates()[-1]['update_id'] # Присваиваем ID последнего отправленного сообщения боту
-#     while True:
-#         # time.sleep(2)
-#         messages = get_updates(update_id) # Получаем обновления
-#         for message in messages:
-#             # Если в обновлении есть ID больше чем ID последнего сообщения, значит пришло новое сообщение
-#             if update_id < message['update_id']:
-#                 update_id = message['update_id'] # Присваиваем ID последнего отправленного сообщения боту
-#                 # Отвечаем тому кто прислал сообщение боту
-#                 check_message(message['message']['chat']['id'], message['message']['text'])
+# def disable_tasks(user_id):
+#     habits = Habit.objects.filter(id=user_id)
+#     for habit in habits:
+#         PeriodicTask.objects.filter(id=habit.task_id).update(enabled=False)
+
+
+# TG BOT
+@bot.message_handler(commands=['start'])
+def start_message(message):
+    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    keyboard.row("Авторизоваться", "Сменить пользователя")
+    bot.send_message(message.chat.id,
+                     f'Привет {message.from_user.first_name}\n'
+                     f'Для активации сервиса уведомлений необходимо авторизоваться',
+                     reply_markup=keyboard)
+
+
+@bot.message_handler(func=lambda message: message.text == "Авторизоваться")
+def authorization(message):
+    user = User.objects.filter(chat_id=message.chat.id)
+    if user.exists():
+        bot.send_message(message.chat.id, "Вы уже авторизованы")
+    else:
+        authorized_user(message)
+
+
+@bot.message_handler(func=lambda message: message.text == "Сменить пользователя")
+def change_user_start(message):
+    user = User.objects.filter(chat_id=message.chat.id, is_active=True)
+    if user.exists():
+        authorized_user(message)
+    else:
+        bot.send_message(message.chat.id, "Вы еще не авторизованы")
+
+
+@bot.message_handler(func=lambda message: True)
+def other_handle_message(message):
+    user = User.objects.filter(chat_id=message.chat.id, is_active=True)
+    if not user.exists():
+        bot.send_message(message.chat.id, f'{message.from_user.first_name}! Для начала авторизуйтесь.')
+
+
+def process_email(message):
+    email = message.text
+    user = User.objects.filter(email=email, is_active=True)
+
+    if user.exists() and not user.first().chat_id:
+        bot.send_message(message.chat.id, "Введите пароль")
+        bot.register_next_step_handler(message, process_password, user.first())
+    elif user.exists() and user.first().chat_id:
+        bot.send_message(message.chat.id, "Вы уже авторизованы под этим пользователем!")
+    else:
+        bot.send_message(message.chat.id, "Такого пользователя не существует")
+
+
+def process_password(message, user):
+    password = message.text
+    if user.check_password(password):
+        user.chat_id = message.chat.id
+        user.save()
+        bot.send_message(message.chat.id, "Вы успешно авторизованы!")
+    else:
+        bot.send_message(message.chat.id, "Неверный пароль")
+
+
+def authorized_user(message):
+    bot.send_message(message.chat.id, "Введите адрес электронной почты")
+    bot.register_next_step_handler(message, process_email)

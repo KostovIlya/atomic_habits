@@ -1,11 +1,10 @@
-from django.shortcuts import render
 from rest_framework import generics
-from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from rest_framework.permissions import IsAdminUser
 
 from habits.models import Habit
 from habits.permissions import IsOwner
 from habits.serializers import HabitSerializer
-from habits.services import send_message_bot, create_periodic_task, update_periodic_task, delete_periodic_task
+from habits.services import create_periodic_task, update_periodic_task, delete_periodic_task
 
 
 class HabitCreateAPIView(generics.CreateAPIView):
