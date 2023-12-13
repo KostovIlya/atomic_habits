@@ -11,7 +11,7 @@ class HabitValidator:
         self.related_habit = related_habit
         self.reward = reward
 
-    def __call__(self, value) -> None:
+    def __call__(self, value):
         _is_pleasurable = value.get(self.is_pleasurable)
         _related_habit = value.get(self.related_habit)
         _reward = value.get(self.reward)
